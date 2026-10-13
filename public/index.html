@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ferry booking – Flow + seat reservation</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  </head>
+  <body class="bg-gray-100 min-h-screen text-gray-900">
+    <!-- Test toggle -->
+    <div class="fixed top-4 right-4 z-10 bg-white rounded-lg shadow px-4 py-2">
+      <label class="flex items-center gap-2 text-sm cursor-pointer">
+        <input type="checkbox" id="simulate-sold-out" class="h-4 w-4" />
+        Simulate seats unavailable
+      </label>
+    </div>
+
+    <main class="max-w-lg mx-auto py-16 px-4">
+      <h1 class="text-2xl font-semibold mb-6">Complete your booking</h1>
+
+      <!-- Booking summary -->
+      <section class="bg-white rounded-lg shadow p-6 mb-6">
+        <h2 class="text-sm font-medium text-gray-500 uppercase mb-3">Booking summary</h2>
+        <div class="flex justify-between">
+          <span>Ferry ticket × 1</span>
+          <span>€100.00</span>
+        </div>
+        <div class="flex justify-between font-semibold border-t border-gray-200 mt-3 pt-3">
+          <span>Total</span>
+          <span>€100.00</span>
+        </div>
+        <p class="text-xs text-gray-400 mt-3">
+          Payment session: <span id="session-id" class="font-mono">loading…</span>
+        </p>
+      </section>
+
+      <!-- Flow -->
+      <section class="bg-white rounded-lg shadow p-6">
+        <div id="flow-container"></div>
+        <button
+          id="pay-button"
+          class="mt-4 w-full rounded-md bg-blue-600 px-4 py-3 font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          Pay €100.00
+        </button>
+      </section>
+    </main>
+
+    <!-- Confirming overlay -->
+    <div
+      id="overlay"
+      class="hidden fixed inset-0 z-50 items-center justify-center bg-black/60"
+    >
+      <div class="flex flex-col items-center gap-4 rounded-lg bg-white px-8 py-6 shadow-lg">
+        <div class="h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600"></div>
+        <p class="font-medium">Confirming…</p>
+      </div>
+    </div>
+
+    <script src="https://checkout-web-components.checkout.com/index.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>
