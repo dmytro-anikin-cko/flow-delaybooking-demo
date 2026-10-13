@@ -15,7 +15,7 @@ const RESERVATION_DELAY_MS = 10000; // fake operator availability check
 const reservedSessions = new Set();
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, "public"), { extensions: ["html"] }));
 
 const ckoHeaders = () => ({
   Authorization: `Bearer ${process.env.CKO_SECRET_KEY}`,
@@ -28,6 +28,8 @@ app.get("/api/config", (req, res) => {
 });
 
 app.post("/api/get-payment-session", async (req, res) => {
+  const { threeDS } = req.body || {};
+  const origin = `${req.protocol}://${req.get("host")}`;
   try {
     const response = await fetch(`${CKO_API}/payment-sessions`, {
       method: "POST",
@@ -35,8 +37,8 @@ app.post("/api/get-payment-session", async (req, res) => {
       body: JSON.stringify({
         amount: AMOUNT,
         currency: CURRENCY,
-        // TODO (production): enable 3DS
-        "3ds": { enabled: false },
+        // Toggled from the UI; the 3DS setting is fixed at session creation
+        "3ds": { enabled: Boolean(threeDS) },
         billing: { address: { country: "NL" } },
         enabled_payment_methods: ["card", "googlepay", "applepay"],
         items: [
@@ -48,8 +50,8 @@ app.post("/api/get-payment-session", async (req, res) => {
             total_amount: AMOUNT,
           },
         ],
-        success_url: "https://example.com/success",
-        failure_url: "https://example.com/failure",
+        success_url: `${origin}/success`,
+        failure_url: `${origin}/failure`,
         processing_channel_id: process.env.CKO_PROCESSING_CHANNEL_ID,
       }),
     });

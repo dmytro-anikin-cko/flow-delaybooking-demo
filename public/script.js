@@ -4,6 +4,7 @@ const payButton = document.getElementById("pay-button");
 const overlay = document.getElementById("overlay");
 const sessionIdEl = document.getElementById("session-id");
 const soldOutToggle = document.getElementById("simulate-sold-out");
+const threeDSToggle = document.getElementById("enable-3ds");
 
 const PAY_LABEL = "Pay €100.00";
 
@@ -66,10 +67,28 @@ async function reserveOrAbort() {
   return { continue: true };
 }
 
-async function init() {
+// (Re)creates the payment session and mounts Flow.
+// Called on load and whenever the 3DS toggle changes (3DS is fixed per session).
+async function setup() {
+  threeDSToggle.disabled = true;
+  if (component) {
+    component.unmount();
+    component = null;
+  }
+  document.getElementById("flow-container").innerHTML = "";
+  paymentSessionId = null;
+  submissionAborted = false;
+  hideOverlay();
+  resetPayButton();
+  sessionIdEl.textContent = "loading…";
+
   const [{ publicKey }, session] = await Promise.all([
     fetch("/api/config").then((r) => r.json()),
-    fetch("/api/get-payment-session", { method: "POST" }).then((r) => r.json()),
+    fetch("/api/get-payment-session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ threeDS: threeDSToggle.checked }),
+    }).then((r) => r.json()),
   ]);
 
   if (!session.id) {
@@ -145,6 +164,16 @@ async function init() {
     component.mount("#flow-container");
   }
 }
+
+function init() {
+  return setup().finally(() => {
+    threeDSToggle.disabled = false;
+  });
+}
+
+threeDSToggle.addEventListener("change", () => {
+  init().catch((err) => console.error("Init failed:", err));
+});
 
 payButton.addEventListener("click", () => {
   submissionAborted = false;

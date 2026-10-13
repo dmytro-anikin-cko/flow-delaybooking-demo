@@ -9,7 +9,7 @@ Uses the Checkout.com **sandbox** and [Flow](https://www.checkout.com/docs/payme
 - A fixed booking summary (one ferry ticket, €100.00) with Flow and a custom Pay button (`showPayButton: false`).
 - Seat reservation (simulated operator call, 10 s delay) inside Flow's `onTokenized` (cards) and `onAuthorized` (wallets) callbacks. Returning `{ continue: false }` aborts before any payment request.
 - A server-side safety net: `/api/submit-payment-session` refuses (403) to call Checkout.com unless the payment session has a reservation, so the client-side check can't be bypassed.
-- A "Simulate seats unavailable" checkbox (top right) to test the sold-out path.
+- Two test toggles (top right): "Simulate seats unavailable" for the sold-out path and "Enable 3DS" (off by default). Toggling 3DS creates a new payment session and remounts Flow, because 3DS is fixed at session creation. Minimal `/success` and `/failure` pages serve as the session's redirect URLs.
 
 ## Setup
 
@@ -32,23 +32,23 @@ Open http://localhost:3000.
 ## How to test
 
 - **Happy path:** enter a sandbox test card (e.g. `4242 4242 4242 4242`, any future expiry, any CVV), click Pay. A "Confirming…" overlay shows for ~10 s while seats are reserved, then the payment goes through and the button shows "Payment Complete ✅".
+- **3DS:** tick "Enable 3DS", then pay with `4242 4242 4242 4242`. Seats are reserved *before* the challenge, so a failed or abandoned challenge leaves the reservation held (see below).
 - **Sold-out path:** tick "Simulate seats unavailable" and pay. After ~10 s the overlay closes, Flow shows "Sorry, these seats are no longer available." and **no payment is created**.
 - **Server-side guard:** `POST /api/submit-payment-session` with a session ID that was never reserved returns `403` without calling Checkout.com.
 - **Wallets:** Google Pay / Apple Pay appear in Flow if available for your browser/device and sandbox account.
 
 ## Event order & gotchas
 
-Based on reading the Flow SDK bundle and testing:
+Based on testing in the Checkout.com sandbox:
 
 - **Cards:** `submit()` → validity check → `onSubmit` (not awaited) → tokenization → `onTokenized` (awaited) → Flow applies `{ continue: false }` as an abort before any payment request → `handleSubmit` → backend submit.
 - **Google Pay:** button click → wallet sheet → `onAuthorized` (awaited; the Google Pay sheet is already closed at this point) → THEN `submit()` fires `onSubmit` → `onTokenized` fires without being awaited and its return value is ignored → abort check → `handleSubmit`.
 - So `onSubmit` can fire **after** an abort on wallets. A UI that treats `onSubmit` as "payment is going ahead" would re-show the overlay and leave it stuck. This is why the `submissionAborted` flag exists.
 - Wallets are gated only by `onAuthorized`; `{ continue: false }` from `onTokenized` does not stop a wallet payment.
-- Apple Pay behaviour (whether the sheet stays open during `onAuthorized`, and its session timeout) was not verified; test before relying on a long reservation.
-- Reservations here are in-memory, never expire, and are never released. A real integration needs a reservation TTL, release on payment failure/abandonment, and tying the reservation to the order and amount.
+- Reservations here are in-memory, never expire, and are never released (this includes a failed or abandoned 3DS challenge, which happens after seats are reserved). A real integration needs a reservation TTL, release on payment failure/abandonment, and tying the reservation to the order and amount.
 - `{ continue: false }` is the supported abort in Flow; `handleSubmit` has no supported abort and must return the unmodified submit response.
 
 ## Production TODOs
 
-- **3DS is disabled** (`3ds: { enabled: false }`) to keep the demo simple. Enable it in production.
+- **3DS is off by default** in this demo (toggle at top right). Enable it in production.
 - Real operator integration, reservation expiry/release, and amount/order validation (see above).
